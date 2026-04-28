@@ -1,0 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Brand Colors */
+  --color-primary: #5341cd;
+  --color-primary-container: #6c5ce7;
+  --color-secondary: #006a67;
+  --color-secondary-container: #5af9f3;
+  --color-tertiary: #a13034;
+  --color-tertiary-container: #c2484a;
+
+  /* Neutral Surface Palette */
+  --color-surface: #f4fafd;
+  --color-surface-container: #e8eff1;
+  --color-surface-container-low: #eef5f7;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-variant: #dde4e6;
+
+  /* On-Colors */
+  --color-on-surface: #161d1f;
+  --color-on-surface-variant: #474554;
+  --color-outline: #787586;
+
+  /* Custom Transitions */
+  --animate-scale-in: scale-in 0.2s ease-out;
+
+  @keyframes scale-in {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-surface text-on-surface font-sans antialiased;
+  }
+}
+
+.custom-shadow {
+  box-shadow: 0 4px 10px rgba(108, 92, 231, 0.05);
+}
+
+.card-elevation {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
