@@ -90,7 +90,9 @@ const Navbar = ({ active, onChange }: { active: Screen; onChange: (s: Screen) =>
   );
 };
 
-const Dashboard = ({ onAdd }: { onAdd: () => void }) => {
+const Dashboard = ({ onAdd, transactions }: { onAdd: () => void; transactions: Transaction[] }) => {
+  const totalSpent = Math.abs(transactions.reduce((acc, t) => t.type === 'expense' ? acc + t.amount : acc, 0)).toLocaleString('en-US', { minimumFractionDigits: 2 });
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -102,7 +104,7 @@ const Dashboard = ({ onAdd }: { onAdd: () => void }) => {
       <section className="bg-white rounded-[32px] p-8 card-elevation text-center space-y-6">
         <div>
           <p className="text-sm font-medium text-on-surface-variant">Total Spent</p>
-          <h2 className="text-4xl font-extrabold text-indigo-600 mt-1">$4,285.50</h2>
+          <h2 className="text-4xl font-extrabold text-indigo-600 mt-1">${totalSpent}</h2>
         </div>
 
         {/* Circular Chart Placeholder/SVG */}
@@ -136,7 +138,7 @@ const Dashboard = ({ onAdd }: { onAdd: () => void }) => {
           <button className="text-sm font-semibold text-indigo-600">View All</button>
         </div>
         <div className="space-y-3">
-          {TRANSACTIONS.map((t) => (
+          {transactions.map((t) => (
             <div key={t.id} className="bg-white p-4 rounded-2xl flex justify-between items-center card-elevation">
               <div className="flex items-center gap-4">
                 <div className={`w-12 h-12 ${t.iconBg} ${t.iconColor} rounded-full flex items-center justify-center`}>
@@ -144,7 +146,7 @@ const Dashboard = ({ onAdd }: { onAdd: () => void }) => {
                 </div>
                 <div>
                   <p className="text-sm font-bold text-slate-800">{t.name}</p>
-                  <p className="text-[10px] font-semibold text-slate-400">{t.count} Transactions</p>
+                  <p className="text-[10px] font-semibold text-slate-400">{t.count ? `${t.count} Transactions` : t.date}</p>
                 </div>
               </div>
               <p className="text-base font-bold text-slate-800">{t.amount < 0 ? `-` : ''}${Math.abs(t.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
@@ -164,7 +166,9 @@ const Dashboard = ({ onAdd }: { onAdd: () => void }) => {
   );
 };
 
-const AddExpense = ({ onBack }: { onBack: () => void }) => {
+const AddExpense = ({ onBack, onSave }: { onBack: () => void; onSave: (tx: Partial<Transaction>) => void }) => {
+  const [amount, setAmount] = useState('0.00');
+  const [selectedCategory, setSelectedCategory] = useState(0);
   const categories = [
     { id: 'shop', name: 'Shopping', icon: ShoppingBag, color: 'text-pink-500', bg: 'bg-pink-50' },
     { id: 'food', name: 'Food', icon: Utensils, color: 'text-orange-500', bg: 'bg-orange-50' },
@@ -175,6 +179,21 @@ const AddExpense = ({ onBack }: { onBack: () => void }) => {
     { id: 'travel', name: 'Travel', icon: Plane, color: 'text-green-500', bg: 'bg-green-50' },
     { id: 'other', name: 'Other', icon: PlusCircle, color: 'text-slate-500', bg: 'bg-slate-50' },
   ];
+
+  const handleSave = () => {
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) return;
+    
+    const cat = categories[selectedCategory];
+    onSave({
+      amount: numAmount,
+      name: cat.name,
+      category: cat.name,
+      icon: cat.icon,
+      iconBg: cat.bg,
+      iconColor: cat.color
+    });
+  };
 
   return (
     <motion.div 
@@ -203,7 +222,8 @@ const AddExpense = ({ onBack }: { onBack: () => void }) => {
           <input 
             autoFocus
             type="text" 
-            defaultValue="0.00"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
             className="w-40 text-5xl font-black text-slate-800 bg-transparent border-none focus:ring-0 text-center p-0"
           />
         </div>
@@ -216,7 +236,11 @@ const AddExpense = ({ onBack }: { onBack: () => void }) => {
         </div>
         <div className="grid grid-cols-4 gap-4">
           {categories.map((cat, i) => (
-            <button key={cat.id} className={`flex flex-col items-center gap-2 p-3 rounded-2xl bg-white card-elevation transition-all ${i === 0 ? 'ring-2 ring-indigo-500' : 'hover:bg-indigo-50'}`}>
+            <button 
+              key={cat.id} 
+              onClick={() => setSelectedCategory(i)}
+              className={`flex flex-col items-center gap-2 p-3 rounded-2xl bg-white card-elevation transition-all ${selectedCategory === i ? 'ring-2 ring-indigo-500 bg-indigo-50/30' : 'hover:bg-indigo-50'}`}
+            >
               <div className={`w-12 h-12 ${cat.bg} ${cat.color} rounded-full flex items-center justify-center mb-1`}>
                 <cat.icon size={20} />
               </div>
@@ -268,7 +292,10 @@ const AddExpense = ({ onBack }: { onBack: () => void }) => {
         </div>
       </section>
 
-      <button className="w-full py-4 bg-indigo-600 text-white rounded-full text-lg font-bold shadow-xl shadow-indigo-100 active:scale-[0.98] transition-transform">
+      <button 
+        onClick={handleSave}
+        className="w-full py-4 bg-indigo-600 text-white rounded-full text-lg font-bold shadow-xl shadow-indigo-100 active:scale-[0.98] transition-transform"
+      >
         Save Expense
       </button>
     </motion.div>
@@ -401,15 +428,33 @@ const Stats = () => {
 
 export default function App() {
   const [activeScreen, setActiveScreen] = useState<Screen>('home');
+  const [transactions, setTransactions] = useState<Transaction[]>(TRANSACTIONS);
+
+  const handleSaveExpense = (newTx: Partial<Transaction>) => {
+    const tx: Transaction = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: newTx.name || 'Expense',
+      category: newTx.category || 'Other',
+      amount: -(newTx.amount || 0),
+      count: 1,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      type: 'expense',
+      icon: newTx.icon || PlusCircle,
+      iconBg: newTx.iconBg || 'bg-slate-100',
+      iconColor: newTx.iconColor || 'text-slate-600',
+    };
+    setTransactions([tx, ...transactions]);
+    setActiveScreen('home');
+  };
 
   const renderContent = () => {
     switch (activeScreen) {
       case 'home':
-        return <Dashboard onAdd={() => setActiveScreen('add')} />;
+        return <Dashboard transactions={transactions} onAdd={() => setActiveScreen('add')} />;
       case 'stats':
         return <Stats />;
       case 'add':
-        return <AddExpense onBack={() => setActiveScreen('home')} />;
+        return <AddExpense onSave={handleSaveExpense} onBack={() => setActiveScreen('home')} />;
       default:
         return (
           <div className="flex flex-col items-center justify-center h-96 text-slate-400">
